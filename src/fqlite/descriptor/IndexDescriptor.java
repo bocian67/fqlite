@@ -18,10 +18,11 @@ import fqlite.util.Auxiliary;
  * @author pawlaszc
  *
  */
+@SuppressWarnings("rawtypes")
 public class IndexDescriptor extends AbstractDescriptor implements Comparable{
 
-	public List<String> columntypes;
-	public ArrayList<String> columnnames;
+	//public List<String> columntypes;
+	//public ArrayList<String> columnnames;
 	public List<String> boolcolumns;
 	int size = 0;
 	public String idxname = "";
@@ -30,8 +31,23 @@ public class IndexDescriptor extends AbstractDescriptor implements Comparable{
     public HeaderPattern hpattern = null;	
     private String sql = "";
 	public Hashtable<String,String> tooltiptypes = new Hashtable<String,String>();
+	//public List<String> serialtypes;
 
+	
+	public void addColumtype(String columntype){
+		serialtypes.add(columntype);
+		columntypes.add(columntype);
+	}
        
+	public List<String> getColumntypes() {
+		return serialtypes;
+	}
+
+
+	public void setColumntypes(List<String> columntypes) {
+		this.serialtypes = columntypes;
+	}
+	
     public boolean checkMatch(String match) {
 		
         try
@@ -113,23 +129,26 @@ public class IndexDescriptor extends AbstractDescriptor implements Comparable{
 		this.idxname = idxname;
 		this.tablename = tablename;
 		this.columntypes = new LinkedList<String>();
+		this.serialtypes = new LinkedList<String>();
+		
 		this.setSql(stmt);
 		this.boolcolumns = new LinkedList<String>();
 		
 		/* find the bool columns */ 
-		for(int i=0; i < names.size(); i++)
-		{
+		//for(int i=0; i < names.size(); i++)
+		//{
 		
-			if (columntypes.size()>i && columntypes.get(i).startsWith("BOOL"))
-			{
-				this.boolcolumns.add(names.get(i));
-			}
+		//	if (columntypes.size()>i && columntypes.get(i).startsWith("BOOL"))
+		//	{
+		//		this.boolcolumns.add(names.get(i));
+		//	}
 		
-			if (columntypes.size() > i )
-				tooltiptypes.put(names.get(i),columntypes.get(i));
+		//	if (columntypes.size() > i )
+		//		tooltiptypes.put(names.get(i),columntypes.get(i));
 			
-		}
+		//}
 		
+
 		
 	}
 	
@@ -166,6 +185,15 @@ public class IndexDescriptor extends AbstractDescriptor implements Comparable{
 		return this.root;
 	}
 
+	
+	public HeaderPattern getHpattern() {
+		return hpattern;
+	}
+
+
+	public void setHpattern(HeaderPattern hpattern) {
+		this.hpattern = hpattern;
+	}
 	
 	/**
 	 * Returns the indices header length.
@@ -237,8 +265,8 @@ public class IndexDescriptor extends AbstractDescriptor implements Comparable{
 	 * 
 	 **/
 	public void printIndexDefinition() {
-		System.out.println("Index" + idxname);
-		System.out.println("COLUMNS: " + columnnames);
+		//System.out.println("Index" + idxname);
+		//System.out.println("COLUMNS: " + columnnames);
 	}
 
 	@Override

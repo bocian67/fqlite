@@ -1,23 +1,35 @@
 package fqlite.ui;
 
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import fqlite.base.GUI;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableView;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -80,6 +92,10 @@ public class DBPropertyPanel extends StackPane{
         String column[]={"Offset","Property","Value"};         
 		
 		TableView table = new TableView<>();
+		table.getSelectionModel().setSelectionMode(
+			    SelectionMode.MULTIPLE
+		);
+		createContextMenu(table);
 		
 		for (int i = 0; i < column.length; i++) {
 	            String colname = column[i];
@@ -101,11 +117,24 @@ public class DBPropertyPanel extends StackPane{
 				    	
 				}
 				
+				/* first column is a integer column */
+				if (i == 0) {
+					col.setComparator(new Comparator<Object>() {
+			            @Override
+			            public int compare(Object o1, Object o2) {
+			            
+			            	Long i1 = Long.parseLong((String)o1);
+			                Long i2 = Long.parseLong((String)o2);
+			                return (i1 < i2) ? -1 : +1 ;
+			            }
+			        });
+				}
+				
 				
 				table.getColumns().add(col);
 		}
 		
-		fillTable(table,data);
+		fillTable(table,data,false);
 		
 		
         StackPane fields = new StackPane();
@@ -124,6 +153,13 @@ public class DBPropertyPanel extends StackPane{
         		+ " <style type=\"text/css\">\n"
         		+ "  table, td, tr { border:1px solid black;}\n"
         		+ " </style>"
+        		
+        	    + "<script>"
+                + "function scrollTo(elementId) {"
+                + "document.getElementById(elementId).scrollIntoView();"
+                + "}"
+                + "</script>"
+            
                 + " </head>"
                 + " <body>"                
                 + "<h1>Schema Information for database: " + info.filename + "</h1>";	
@@ -134,6 +170,8 @@ public class DBPropertyPanel extends StackPane{
         str += "<hr>";
         str += "<h2> TABLES </h2>";
         str += "<hr>";
+        
+        
         
         boolean firstindex = true;
         
@@ -150,7 +188,9 @@ public class DBPropertyPanel extends StackPane{
                 str += "<hr>";
             	firstindex=false;
             }
-        	str += "<a href=\"#"+tname+"\">"+tname+"</a><br />";
+            
+            str += "<a href='#"+tname+"' onclick=scrollTo('" + tname + "')>"+tname+"</a><br />";
+            
         }
         	
         
@@ -236,7 +276,8 @@ public class DBPropertyPanel extends StackPane{
 	        }
 	        str += "</tbody>";
 	        str += "</table>";
-            str += "<a href=\"#top\">[TOP]</a><br/>";
+            //str += "<a href=\"#top\">[TOP]</a><br/>";
+            str += "<a href='#' onclick=scrollTo('top')>[TOP]</a><br/>";
 	        str += "</p>";
 
         }
@@ -253,21 +294,25 @@ public class DBPropertyPanel extends StackPane{
  	    
 	    Stage secondStage = new Stage();
         Scene scene = new Scene(new SchemaBrowser(columnStr),750,500, javafx.scene.paint.Color.web("#666970"));			
-	    secondStage.setTitle("Schema Info");
+	    System.out.println(columnStr);
+        secondStage.setTitle("Schema Info");
         secondStage.setScene(scene);
         secondStage.show();
 	}
 	
-	
-	
-	
-	public void initSchemaTable(String[][] data)
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public void initPagesTable(String[][] data)
 	{
 		
 		
-		String column[]={"Type","Tablename","Root","SQL-Statement","Virtual","ROWID"};         
+		String column[]={"page","offset","type of page","table","signature"};         
 		
 		TableView table = new TableView<>();
+		table.getSelectionModel().setSelectionMode(
+			    SelectionMode.MULTIPLE
+		);
+		createContextMenu(table);
 		
 		for (int i = 0; i < column.length; i++) {
 	           
@@ -280,12 +325,99 @@ public class DBPropertyPanel extends StackPane{
 	            }                    
 				});
 				
+				/* first 2 columns are integer/long columns */
+				if (i == 0 || i == 1) {
+					col.setComparator(new Comparator<Object>() {
+			            @Override
+			            public int compare(Object o1, Object o2) {
+			            
+			            	Long i1 = Long.parseLong((String)o1);
+			                Long i2 = Long.parseLong((String)o2);
+			                return (i1 < i2) ? -1 : +1 ;
+			            }
+			        });
+				}
+				
+               // col.setSortable(false);
+					
+				
 				switch(i)
 				{
-				
-					case 1:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.15));
+					case 0:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.08));
+							  break;	
+					case 2:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.20));
 				              break;
-					case 3:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.5));
+					case 3:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.25));
+							  break;
+				    case 4:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.30));
+							  break;
+//							    
+//					default:  col.prefWidthProperty().bind(table.widthProperty().multiply(0.20));    	
+//				    	
+				}
+				
+				
+				table.getColumns().add(col);
+		}
+		
+		if (null != data)
+			fillTable(table,data,true);
+		
+				
+		Tab pagetab = new Tab("Pages", table);
+		
+		tabpane.getTabs().add(pagetab);
+			
+
+	}
+	
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public void initSchemaTable(String[][] data)
+	{
+		
+		
+		String column[]={"No.","Type","Tablename","Root","SQL-Statement","Virtual","ROWID"};         
+		
+		TableView table = new TableView<>();
+		table.getSelectionModel().setSelectionMode(
+			    SelectionMode.MULTIPLE
+		);
+		createContextMenu(table);
+
+		for (int i = 0; i < column.length; i++) {
+	           
+				String colname = column[i];
+	            final int j = i;                
+				TableColumn col = new TableColumn(colname);
+				col.setCellValueFactory(new Callback<CellDataFeatures<ObservableList,String>,ObservableValue<String>>(){                    
+	            public ObservableValue<String> call(CellDataFeatures<ObservableList, String> param) {                                                                                              
+	                return new SimpleStringProperty(param.getValue().get(j)!=null? param.getValue().get(j).toString() :"");                        
+	            }                    
+				});
+				
+				/* first column is a integer columns */
+				if (i == 0 || i == 3) {
+					col.setComparator(new Comparator<Object>() {
+			            @Override
+			            public int compare(Object o1, Object o2) {
+			            
+			            	Long i1 = Long.parseLong((String)o1);
+			                Long i2 = Long.parseLong((String)o2);
+			                return (i1 < i2) ? -1 : +1 ;
+			            }
+			        });
+				}
+				
+								
+				
+				switch(i)
+				{
+					case 0:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.05));
+							  break;	
+					case 2:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.15));
+				              break;
+					case 4:   col.prefWidthProperty().bind(table.widthProperty().multiply(0.5));
 							  break;
 				    default:  col.prefWidthProperty().bind(table.widthProperty().multiply(0.08));    	
 				    	
@@ -296,7 +428,7 @@ public class DBPropertyPanel extends StackPane{
 		}
 		
 		if (null != data)
-			fillTable(table,data);
+			fillTable(table,data,true);
 		
 				
 		Tab schematab = new Tab("SQL-Schema", table);
@@ -306,18 +438,29 @@ public class DBPropertyPanel extends StackPane{
 
 	}
 	
-	private void fillTable(TableView table, String[][] data)
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void fillTable(TableView table, String[][] data, boolean rowno)
 	{
 		// define array list for all table rows 
 	    ObservableList<ObservableList> obdata = FXCollections.observableArrayList();
 		
+	    int rownumber = 1;
+	    
 	    // iterate over row array to create a data row 
 	 	for(int i = 0; i < data.length; i++)
 	 	{
-	 			String [] s = data[i];
-	 			ObservableList<String> row = FXCollections.observableArrayList();
-                row.addAll(s);
+	 		    if(data[i][0]==null)
+	 		    	continue;
+	 		    String [] s = data[i];
+	 			ObservableList<Object> row = FXCollections.observableArrayList();
+                if (rowno)
+                	row.add(rownumber);
+	 		    for(Object o : s) {
+	 		    	row.add(o);
+	 		    }
                 obdata.add(row);
+                rownumber++;
 	 	}
 	 		
 	    // finally update TableView with data set
@@ -330,5 +473,146 @@ public class DBPropertyPanel extends StackPane{
 	}
 	
 	
+private ContextMenu createContextMenu(TableView<String> table){
+		
+		final ContextMenu contextMenu = new ContextMenu();
+
+		
+		
+		
+		table.setOnMouseClicked(new EventHandler<javafx.scene.input.MouseEvent>() {
+			
+			@Override
+			public void handle(javafx.scene.input.MouseEvent event) {
+
+				if(event.getButton() == MouseButton.SECONDARY) {
+					  
+					   //ContextMenu tcm = createContextMenu(CtxTypes.TABLE,table); 
+					   contextMenu.show(table.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+				   }
+				
+			}	
+		});
+		
+		// copy a single table line
+		MenuItem mntcopyline = new MenuItem("Copy Line(s)");
+		String s = GUI.class.getResource("/edit-copy.png").toExternalForm();
+	    ImageView iv = new ImageView(s); 
+
+		
+	 	final KeyCodeCombination copylineCombination = new KeyCodeCombination(KeyCode.L, KeyCombination.SHORTCUT_DOWN);
+    	final KeyCodeCombination copycellCombination = new KeyCodeCombination(KeyCode.C, KeyCombination.SHORTCUT_DOWN);
 	
+	    
+    	table.setOnKeyPressed(new EventHandler<KeyEvent>(){
+		
+   		
+		    @Override
+		    public void handle(KeyEvent event) {
+			    if (!table.getSelectionModel().isEmpty())
+			    {   	
+			   	 
+			    	if(copylineCombination.match(event))
+			    	{	
+				    	copyLineAction(table);
+				    	event.consume();
+				    }
+			    	else if(copycellCombination.match(event))
+			    	{
+			    		copyCellAction(table);
+			    		event.consume();
+			    	}
+			    	
+			    }
+		    }
+		});
+	 
+    	
+		
+		// copy the complete table line (with all cells)
+		MenuItem mntcopycell= new MenuItem("Copy Cell");
+	    s = GUI.class.getResource("/edit-copy.png").toExternalForm();
+		iv = new ImageView(s);
+		mntcopycell.setGraphic(iv);
+	    mntcopycell.setAccelerator(copycellCombination);
+		mntcopycell.setOnAction(e ->{
+			copyCellAction(table);
+			e.consume();
+		}
+		);
+		
+		
+		mntcopyline.setAccelerator(copylineCombination);
+		    mntcopyline.setGraphic(iv);
+			mntcopyline.setOnAction(e ->{
+				copyLineAction(table);     		
+				e.consume();
+		}
+		);
+
+		
+		contextMenu.getItems().addAll(mntcopyline,mntcopycell);
+	    return contextMenu;
+	}
+	
+
+	
+	/**
+	 * Action handler method.   
+	 * @param table
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void copyLineAction(TableView table){
+		
+		StringBuffer sb = new StringBuffer();			
+	 	final javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+	    final ClipboardContent content = new ClipboardContent();
+	    ObservableList<TablePosition> selection = table.getSelectionModel().getSelectedCells();	        
+	    Iterator<TablePosition> iter = selection.iterator();
+	    
+	    while(iter.hasNext()) {
+	    	
+	    	TablePosition pos = iter.next();	        	
+	    	ObservableList<String> hl = (ObservableList<String>)table.getItems().get(pos.getRow());
+	    	  sb.append(hl.toString() + "\n");
+	    }
+	    System.out.println("Write value to clipboard " + sb.toString());
+	    content.putString(sb.toString());
+	    clipboard.setContent(content);
+	
+	}
+
+	/**
+	 * Action handler method.   
+	 * @param table
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void copyCellAction(TableView table){
+
+ 	final javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+    final ClipboardContent content = new ClipboardContent();
+             
+    ObservableList<TablePosition> selection = table.getSelectionModel().getSelectedCells();
+    if (selection.size() == 0)
+    	return;
+    TablePosition tp = selection.get(0); 
+    int row = tp.getRow();
+	int col = tp.getColumn();
+
+    
+    TableColumn tc = (TableColumn) table.getColumns().get(col);
+    ObservableValue observableValue =  tc.getCellObservableValue(row);
+	
+    String cellvalue = "";
+    
+	// not null-check: provide empty string for nulls
+	if (observableValue != null) {			
+		cellvalue = (String)observableValue.getValue();		
+	}
+
+    content.putString(cellvalue);
+    clipboard.setContent(content);
+   
+    
+	}
 }

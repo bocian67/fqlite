@@ -1,14 +1,18 @@
 package fqlite.ui;
 
 import java.util.Iterator;
-
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.binary.Base64InputStream;
-
+import fqlite.analyzer.BinaryLoader;
+import fqlite.analyzer.ConverterFactory;
+import fqlite.analyzer.Names;
+import fqlite.analyzer.avro.Avro;
+import fqlite.analyzer.javaserial.Deserializer;
+import fqlite.analyzer.pblist.BPListParser;
 import fqlite.base.GUI;
+import fqlite.base.Global;
 import fqlite.base.Job;
 import fqlite.descriptor.TableDescriptor;
 import fqlite.util.Auxiliary;
+import fqlite.util.Base64EncoderDecoder;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
@@ -65,7 +69,9 @@ public class TooltippedTableCell<S, T> extends TableCell<S, T> {
     	this.job = job;
     }
     
-    private void updateItem(final Cell<T> cell, final StringConverter<T> converter) {
+  
+    @SuppressWarnings("unchecked")
+	private void updateItem(final Cell<T> cell, final StringConverter<T> converter) {
 
     	
         if (cell.isEmpty()) {
@@ -77,7 +83,7 @@ public class TooltippedTableCell<S, T> extends TableCell<S, T> {
         	//System.out.println(" tooltip>>>" + this.getTableColumn().getText());
         	
         	if(this.getTableColumn().getText().equals("")){
-        		Tooltip tooltip = new Tooltip("state (deleted, updated ...) \n empty .. regular dataset");
+        		Tooltip tooltip = new Tooltip("state (D: deleted, F: freelist)");
 	            //tooltip.prefWidthProperty().bind(cell.widthProperty());
 	            cell.setTooltip(tooltip);	 
 	        	String s = getItemText(cell, converter);
@@ -129,6 +135,9 @@ public class TooltippedTableCell<S, T> extends TableCell<S, T> {
         		}	
         	}
         	
+        	if (null != tttype)
+        		tttype = tttype.toUpperCase();
+        	
         	/* if no table description could be found -> lookup index table */
 //        	if(tttype == null){
 //        		
@@ -149,60 +158,283 @@ public class TooltippedTableCell<S, T> extends TableCell<S, T> {
         		tttype = "";
         	}
         	
-        	
-        	if(s.contains("[BLOB")){
+        	if(tttype.equals("REAL") || tttype.equals("DOUBLE") || tttype.equals("FLOAT")) {
+
+        		String bb = (String)cell.getItem();
+            	int point = bb.indexOf(",");
+                String firstpart;
+            	if (point > 0)
+                	firstpart = bb.substring(0, point);
+                else
+                	firstpart = bb;
+            	//System.out.println("firstpart" + firstpart);
+               
+            	String value = Auxiliary.int2Timestamp(firstpart);
+        		Tooltip tooltip = new Tooltip("[" + tttype + "] " +  bb + "\n" + value );
+        		cell.setTooltip(tooltip);
+        		return;
+        	}
+        	if(tttype.equals("INTEGER") || tttype.equals("INT") || tttype.equals("BIGINT") || tttype.equals("LONG") || tttype.equals("TINYINT") || tttype.equals("INTUNSIGNED") || tttype.equals("INTSIGNED") || tttype.equals("MEDIUMINT")) {
         		
+        		String bb = (String)cell.getItem();
+            	
+        		String value = Auxiliary.int2Timestamp(bb);
+        		Tooltip tooltip = new Tooltip("[" + tttype + "] " +  bb + "\n" + value );
+        		cell.setTooltip(tooltip);
+        		return;
+
+        	}
+        	else if(s.contains("[BLOB")){
         		
-        		// we need the column name 
-        		// the table name 
-        		//System.out.println("Column name >>>>" + this.getTableColumn().getText());
-        		int row = this.getTableRow().getIndex();
-        		//System.out.println("row " + row);
+        		int row = -1;
+        		// we need the column name
+        		try {
+        		
+        			javafx.scene.control.TableRow<S> tr = this.getTableRow();
+        		
+        			if (tr == null)
+        				return;
+        		
+        			row = tr.getIndex();
+            	
+        		}
+        		catch(Exception err){
+        		   // There is a bug actually under windows -> no idea why	
+        		   return;
+        		}
+        		
+      
              	ObservableList<String> hl = (ObservableList<String>)this.getTableView().getItems().get(row);
-        	    //System.out.println("Original Size in Byte >>>" + hl.get(2));
-        	    //System.out.println("Tablename :" + tablename);
-        	    //System.out.println("Job : " + job.path);
-        	    
-        	    //System.out.println("Get Thumbnail from hashset for keyn" + hl.get(5));
-        	    //Long hash = Long.parseLong(hl.get(5)) + this.getTableColumn().getText().hashCode();
         	    int from = s.indexOf("BLOB-");
         	    int to = s.indexOf("]");
         	    String number = s.substring(from+5, to);
-        	    //System.out.println("BLOB >>>>" + s);
         	    
-        	    int id = Integer.parseInt(number);
-        	    Long hash = Long.parseLong(hl.get(5)) + id;
+        	    //int id = Integer.parseInt(number);
+        	    if (hl.get(5)== null || hl.get(5).trim().equals(""))
+        	    	return;
+        	    Long hash = Long.parseLong(hl.get(5));
+        	    String shash = hash + "-" + number;
+        	    Image ii = job.Thumbnails.get(shash);
         	    
-        	    Image ii = job.Thumbnails.get(hash);
+        	    boolean bson 	= false;
+        	    boolean fleece 	= false;
+        	    boolean msgpack = false;
+        	    boolean thriftb = false;
+        	    boolean thriftc = false;
+        	    boolean protobuf = false;
         	    
-        	    //if (null != ii && (s.contains("<bmp>") || s.contains("<jpg>") || s.contains("<png>") || s.contains("<gif>")))
+        	    if (job.convertto.containsKey(tablename)){
+        	    	
+        	    	String con = job.convertto.get(tablename);
+        	    	
+        	    	switch(con){
+        	    	
+        	    	case Names.BSON   : 	bson = true;
+        	    					    	 break;
+        	    	case Names.Fleece : 	 fleece = true;
+					  						 break;
+        	    	case Names.MessagePack  : msgpack = true;
+					  						 break;
+        	    	case Names.ProtoBuffer	: protobuf = true;
+        	    							 break;
+        	    	case Names.ThriftBinary : thriftb = true;
+						 					 break;
+        	    	case Names.ThriftCompact : thriftc = true;
+					 						 break;
+        	    	
+        	    	}
+        	    }
+        	    
+        	    /* image file -> show picture in tool tip */        	    
         	    if(null != ii)
         	    {
         	    	
-        	    	//System.out.println("JPEG|PNG|GIF Gefunden!");
-        	    	//Add text as tooltip so that user can read text without editing it.
-    	            Tooltip tooltip = new Tooltip();
-        	 
+        	        Tooltip tooltip = new Tooltip();
       	    		ImageView iv = new ImageView(ii);
       	          	tooltip.setGraphic(iv);   
     	            cell.setTooltip(tooltip);
         	    }
         	    else
-        	    {
-        	    	String text = Auxiliary.hex2ASCII(getItemText(cell, converter));   
+        	    {	cell.setTooltip(new Tooltip(""));
         	    	
+        	    	if(s.contains("java"))
+        	    	{
+        	    		long off = Long.parseLong(hl.get(5));
+         	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+
+         	        	String javaclass = Deserializer.decode(path); 
+        	           	
+        	           	if(javaclass.length() > 2000){
+        	           		javaclass = javaclass.substring(0,2000);
+        	           	}
+        	           	
+        	    		Tooltip tooltip = new Tooltip(javaclass);
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+   	    	            
+        	    	}    	
+        	    	else if(s.contains("plist"))
+        	    	{
+        	            long off = Long.parseLong(hl.get(5));
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".plist";
+
+        	           	String plist = BPListParser.parse(path); 
+        	           	
+        	           	if(plist.length() > 2000){
+        	           		plist = plist.substring(0,2000);
+        	           	}
+        	           	
+        	    		Tooltip tooltip = new Tooltip(plist);
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	   
+        	    	}
+        	    	else if(s.contains("avro")) {
+        	    		
+        	    		  try {
+        	    			  
+        	    			  long off = Long.parseLong(hl.get(5));
+        	    			  String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+        	    		      String buffer = Avro.decode(path);
+        	    		      Tooltip tooltip = new Tooltip(buffer);
+         	    	          tooltip.setWrapText(true);
+         	    	          tooltip.prefWidthProperty().bind(cell.widthProperty());
+         	    	          cell.setTooltip(tooltip);	  
+        	    		   
+        	    		  } catch (Exception e) {
+        	    		    throw new RuntimeException(e);
+        	    		  }
+        	    		
+        	    		
+        	    	}
         	    	
-            	    //Add text as tooltip so that user can read text without editing it.
-    	            Tooltip tooltip = new Tooltip(text);
-    	            tooltip.setWrapText(true);
-    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
-    	            if(null!=tttype)
-    	            	cell.setTooltip(tooltip);
-    	            
-    	            s = GUI.class.getResource("/hex-32.png").toExternalForm();
-    	    		ImageView iv = new ImageView(s);
-    	    		tooltip.setGraphic(iv);   
-        	    
+        	    	else if(fleece)
+        	    	{
+        	            long off = Long.parseLong(hl.get(5));
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+        	            System.out.println("offset :" + off);
+
+        	        	/* inspection is enabled */
+        	        	String result = ConverterFactory.build(Names.Fleece).decode(path);
+        	        	System.out.println(result);
+        	        	Tooltip tooltip = new Tooltip();
+        	        	if (null != result)
+        	        		tooltip.setText("TEST" + result);
+        	        	else
+        	        		tooltip.setText("invalid value");
+        	        	tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	    	}
+        	    	
+        	    	else if(protobuf)
+        	    	{
+        	            long off = Long.parseLong(hl.get(5));
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+        	
+        	        	/* inspection is enabled */
+        	        	String buffer = ConverterFactory.build(Names.ProtoBuffer).decode(path);
+        	        	Tooltip tooltip = new Tooltip(buffer);
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	    	}
+        	    	
+        	    	else if(thriftb)
+        	    	{
+        	            long off = Long.parseLong(hl.get(5));
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+        	        	
+        	        	/* inspection is enabled */
+        	        	String buffer = ConverterFactory.build(Names.ThriftBinary).decode(path);
+        	        	Tooltip tooltip = new Tooltip(buffer);
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	    	}
+        	    	
+        	    	else if(thriftc)
+        	    	{        	    	
+        	            long off = Long.parseLong(hl.get(5));
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+        	        	
+        	        	/* inspection is enabled */
+        	        	String buffer = ConverterFactory.build(Names.ThriftCompact).decode(path);
+        	        	Tooltip tooltip = new Tooltip(buffer);
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	    	}
+        	    	
+        	    	else if(msgpack)
+        	    	{
+        	            long off = Long.parseLong(hl.get(5));
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+        	        	
+        	        	/* inspection is enabled */
+        	        	String buffer = ConverterFactory.build(Names.MessagePack).decode(path);
+        	        	Tooltip tooltip = new Tooltip(buffer);
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	    	}
+        	    	
+        	    	else if(bson)
+        	    	{
+        	            long off = Long.parseLong(hl.get(5));
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + ".bin";
+        	        	
+        	        	/* inspection is enabled */
+        	        	String buffer = ConverterFactory.build(Names.BSON).decode(path);
+        	        	Tooltip tooltip = new Tooltip(buffer);
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	    	}
+        	    	
+        	    	else if(s.contains("pdf") || s.contains("heic") || s.contains("tiff")) {
+        	    		Tooltip tooltip = new Tooltip("double-click to preview.");
+   	    	            tooltip.setWrapText(true);
+   	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+   	    	            cell.setTooltip(tooltip);
+        	    	}
+        	     	else
+        	    	{
+        	            long off = Long.parseLong(hl.get(5));
+
+        	    		//String text = Auxiliary.hex2ASCII(getItemText(cell, converter));   
+        	            
+        	            String fext = ".bin";
+        	            if(s.contains("<tiff>"))
+        	            		fext = ".tiff";
+        	            else if(s.contains("<pdf>"))
+        	            		fext = ".pdf";
+        	            else if(s.contains("<heic>"))
+    	            		fext = ".heic";
+        	            else if(s.contains("<gzip>"))
+    	            		fext = ".gzip";
+        	            else if(s.contains("<avro>"))
+        	            	fext = ".avro";
+    	              	           
+        	        	String path = GUI.baseDir + Global.separator + job.filename + "_" + off + "-" + number + fext;
+        	        	String text = BinaryLoader.parseASCII(path);
+        	    	    // only show the first 2000 characters - it's just a tooltip ;-)
+        	    		if(text.length() > 2000)
+        	    			text = text.substring(0,2000);
+        	    		
+        	    		//Add text as "tooltip" so that user can read text without editing it.
+	    	            Tooltip tooltip = new Tooltip(text);
+	    	            tooltip.setWrapText(true);
+	    	            tooltip.prefWidthProperty().bind(cell.widthProperty());
+	    	            if(null!=tttype)
+	    	            	cell.setTooltip(tooltip);
+	    	      
+	    	            s = GUI.class.getResource("/hex-32.png").toExternalForm();
+	    	    		ImageView iv = new ImageView(s);
+	    	    		tooltip.setGraphic(iv);   
+        	    	}
         	    
         	    }
         	    	
@@ -211,37 +443,45 @@ public class TooltippedTableCell<S, T> extends TableCell<S, T> {
         	else{
         		Tooltip tooltip = null;
         		
-        		
-        		
-        		String bb = (String)cell.getItem();
-        		//System.out.println(">>>" + bb + " " + job.timestamps.size());
-        		if(job.timestamps.containsKey(bb)){
-        			Object value = job.timestamps.get(bb);        			
-        			tooltip = new Tooltip(">>>[" + tttype + "] " +  value);
-        		    return;
-        		}
-        		
-        		//@SuppressWarnings("deprecation")
-    			//boolean isBase64 = Base64.isBase64(s);
 
-                //if(isBase64 && s.length() > 2 ){
-                //    try {
-                  //  	byte[] decodedBytes = java.util.Base64.getDecoder().decode(s);
-                  //  	String decodedString = new String(decodedBytes);
-                   
-	              //  	if (tttype == null || tttype == "")
-	            	//		tooltip = new Tooltip(s);
-	            	//	else
-	            	//		tooltip = new Tooltip("[" + tttype + "] " + s);
-	    	        //    tooltip.setWrapText(true);
-	    	        //    tooltip.prefWidthProperty().bind(cell.widthProperty());
-	    	        //    cell.setTooltip(tooltip);	            
-	                	
-	             //   	return;
-                 //   }catch(Exception err){
-                    	
-                 //   }
-                //}
+        		//String bb = (String)cell.getItem();
+        		//System.out.println(">>>" + bb + " " + job.timestamps.size());
+        		//if(job.timestamps.containsKey(bb)){
+        		//	Object value = job.timestamps.get(bb);        			
+        		//	tooltip = new Tooltip("[" + tttype + "] " +  value);
+        		//   return;
+        		//}
+        		
+        		if (tttype.equals("TEXT") || tttype.contains("VARCHAR"))
+        			if(job.inspectBASE64.contains(tablename)) {
+	        			//boolean isBase64 = Base64.isBase64(s);
+	        			
+	        			boolean isBase64 = Base64EncoderDecoder.isBase64Encoded(s);
+	        			
+	        			if(isBase64 && s.length() > 2 ){
+		                    try {
+		                    	System.out.println("inside BASE64 check");
+		                    	
+		                    	String decodedString = Base64EncoderDecoder.decodeFromBase64(s);
+		                    	
+		                    	//byte[] decodedBytes = java.util.Base64.getDecoder().decode(s);
+		                    	
+		                    	//String decodedString = new String(decodedBytes);
+		                   
+			                	if (decodedString != null && decodedString.length() > 0)
+			            			tooltip = new Tooltip(decodedString);
+			            		else
+			            			tooltip = new Tooltip("[" + tttype + "] " + s);
+			                	tooltip.setWrapText(true);
+			                	tooltip.prefWidthProperty().bind(cell.widthProperty());
+			    	            cell.setTooltip(tooltip);	            
+			                	
+			    	            return;
+		                    }catch(Exception err){
+		                    	//System.out.println(err);
+		                    }
+		    			}
+	    		}
                 	
         		
         		//Add text as tooltip so that user can read text without editing it.
@@ -301,4 +541,7 @@ public class TooltippedTableCell<S, T> extends TableCell<S, T> {
         super.updateItem(item, empty);
         updateItem(this, getConverter());
     }
+    
+    
+    
 }

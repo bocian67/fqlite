@@ -14,9 +14,9 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import fqlite.descriptor.IndexDescriptor;
 import fqlite.descriptor.TableDescriptor;
+import fqlite.log.AppLog;
 import fqlite.pattern.HeaderPattern;
 import fqlite.pattern.IntegerConstraint;
-import fqlite.util.Logger;
 
 
 /**
@@ -102,7 +102,7 @@ public class SimpleSQLiteParser {
 		}
 		else if ((stmt.indexOf("CREATE TEMP TABLE")) >= 0)
 		{
-			Logger.out.debug("Found CREATE TEMP TABLE statement");
+			AppLog.debug("Found CREATE TEMP TABLE statement");
 		}
 		else if ((stmt.indexOf("CREATE VIRTUAL TABLE")) >= 0)
 		{
@@ -314,18 +314,21 @@ public class SimpleSQLiteParser {
         		tablename = trim(tablename);
         		if (tablename.length()==0)
         			tablename = "<no name>";
-        		System.out.println("Tablename "  + tablename);
+        		
         	}
         	
         	boolean tblconstraint = false;
-
+        	boolean sqltypes_defined = false;
         	
         	
         	@Override public void enterColumn_name(SQLiteParser.Column_nameContext ctx) 
         	{
+        		sqltypes_defined = false;
+        		
         		if(inForeignTable)
         		{
         			inForeignTable = false;
+            		sqltypes_defined = true;
         			return;
         		}
         		if(isTableConstraint)
@@ -336,14 +339,14 @@ public class SimpleSQLiteParser {
         		
         		String colname = ctx.getText();
         		
-        		System.out.println("enterColumn_name()::colname =" + colname);
+        		//System.out.println("enterColumn_name()::colname =" + colname);
         		
         		if (!colname.equals("CONSTRAINT"))
         		{
         			colname = trim(colname);
         			colnames.add(colname);
         			
-        			System.out.println("Columnname " + colname);
+        			//System.out.println("Columnname " + colname);
         		}
         		else
         		{
@@ -374,29 +377,37 @@ public class SimpleSQLiteParser {
         	
         	@Override public void enterType_name(SQLiteParser.Type_nameContext ctx) 
         	{ 
+        		
         		String value = ctx.getText();
         	    value = value.trim();
         		
+        	    if(value.length()==0)
+        	    	value = "BLOB";
+        	    	
         		/* the CONSTRAINT key word is mistakenly identified a type */
         		if (tblconstraint)
         		{
-        			System.out.println("Table Constraint: " + value);
+        			//System.out.println("Table Constraint: " + value);
         			tableconstraint.add(value);
         			tblconstraint = false;
         		}
         		else
         		{
 	        		sqltypes.add(value);
-	        		System.out.println("SQLType::" + value);
+	        		if(value.equalsIgnoreCase("PRIMARYKEY"))
+	        			value = "BLOB";
+	        		
+	        		//System.out.println("SQLType::" + value);
 	        		String type = getType(value);
 	        		if (type.length()>0)
 	        		{
 	        			coltypes.add(type);
-	        			System.out.println("Typename " + trim(type));
+	        			//System.out.println("Typename " + trim(type));
 	            		
 	        		}
         		}
         		
+        		sqltypes_defined = true;
         	}
         	
         	@Override public void enterKeyword(SQLiteParser.KeywordContext ctx)
@@ -425,7 +436,10 @@ public class SimpleSQLiteParser {
         	{ 
         		String constraint = ctx.getText();
         		
-        		System.out.println("Columnconstraint " + constraint);
+        		//System.out.println("Columnconstraint " + constraint);
+        		
+        		if(constraint.contains("UNIQUE"))
+        			System.out.println(" UNIQUE CONSTRAINT gefunden.");
         		
         		cons += constraint.toUpperCase() + " ";
         	}
@@ -434,7 +448,15 @@ public class SimpleSQLiteParser {
         	
         	@Override public void exitColumn_def(SQLiteParser.Column_defContext ctx) 
         	{ 
-       	        System.out.println("adding cons:" + cons);
+        		/* this method is passed even if SQLType is not defined */
+        		if (!sqltypes_defined)
+        		{
+        			// the default type is BLOB
+	        		sqltypes.add("BLOB");
+	        		coltypes.add("BLOB");
+        		}
+        			
+       	       // System.out.println("adding cons:" + cons);
         		colconstraints.add(cons);
         		column++;
         	}
@@ -444,7 +466,7 @@ public class SimpleSQLiteParser {
         	@Override public void enterTable_constraint(SQLiteParser.Table_constraintContext ctx) 
         	{ 
         		isTableConstraint = true;
-        		System.out.println("Table_constraint :: " +ctx.getText());
+        		//System.out.println("Table_constraint :: " +ctx.getText());
         		tableconstraint.add(ctx.getText());
         	}
 	
@@ -472,6 +494,22 @@ public class SimpleSQLiteParser {
     		    	}
     		    }
     		    
+    		    /*
+				 *	https://www.sqlite.org/datatype3.html
+				 *	
+			     *	3.1. Determination Of Column Affinity
+				 *	
+				 *	If the declared type for a column contains the string "BLOB" or if no type is specified then the column has affinity BLOB.
+				 *	So we can assume that default type is a BLOB.
+    		     */
+    		    if (coltypes.size() > sqltypes.size())
+    		    {
+    		    	for(int i =0; i < (colnames.size()-sqltypes.size()); i++)
+    		    	{
+    		    		coltypes.add("BLOB");
+    		    		sqltypes.add("BLOB");
+    		    	}
+    		    }
     		    
         		
         		int cc = 0;
@@ -536,8 +574,8 @@ public class SimpleSQLiteParser {
 				
 		if (s.startsWith("TIMESTAMP"))
 		{
-			type="INT";
-		}	
+			type="NUMERIC"; 
+ 		}	
 		else if (stringContainsItemFromList(s, texttypes))
 		{
 			type="TEXT";

@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import fqlite.base.Job;
 import fqlite.descriptor.IndexDescriptor;
 import fqlite.descriptor.TableDescriptor;
-import fqlite.util.Logger;
+import fqlite.log.AppLog;
 
 /*
 ---------------
@@ -76,7 +76,7 @@ public class SQLiteSchemaParser {
 		
 		int indexrowid = sql.indexOf("WITHOUT ROWID");
 		if (indexrowid != -1) {
-			Logger.out.debug(" attention: component " + tablename + " is defined as WITHOUT ROWID");
+			AppLog.debug(" attention: component " + tablename + " is defined as WITHOUT ROWID");
 			rowid = false;
 		}	
 
@@ -111,7 +111,7 @@ public class SQLiteSchemaParser {
 				job.virtualTables.put(tds.tblname,tds);
 				
 			if (null != tds) {
-				Logger.out.debug(tds.getStandardPattern().toString());
+				AppLog.debug(tds.getStandardPattern().toString());
 				tds.tblname = tablename;
 				tds.ROWID = rowid;  // this flag indicates weather there is a ROWID or not 
 				/* avoid double entries */
@@ -119,6 +119,11 @@ public class SQLiteSchemaParser {
 				{	
 					job.headers.add(tds);
 					tds.root = root;
+				}
+				else{
+					
+					//System.out.println("Aussortiert ???" + tablename + " tblname " + tds.tblname);
+					//System.out.println(job.headers);
 				}
 			}
 		}

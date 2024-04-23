@@ -28,15 +28,15 @@ public class SqliteElement {
 	
 	public final String getBLOB(byte[] value){
 		
-		/* we took only the first 32 characters of the byte array to display */
+		/* we took only the first 64 characters of the byte array to display */
 		
 		String s = toString(value,false);
 		String v = null;
 		if (s.length() > 64)
 			v = s.substring(0,64);
 		else
-			 v = s;
-		return parseBLOB(v) + v;
+			v = s;
+		return parseBLOB(v)+v;
 	}
 	
 	
@@ -52,7 +52,7 @@ public class SqliteElement {
 		   	return "";
 		}
 		else if (value.length == 0) {
-			System.out.println("Achtung!!! länge null type:: " + type);
+			//System.out.println("Achtung!!! länge null type:: " + type);
 			return "";
 		}
 		else if (type == SerialTypes.STRING)
@@ -85,7 +85,10 @@ public class SqliteElement {
 			  //  if (null != s)
 			  //  	return s;
 			  //  else
-			  return String.valueOf(Auxiliary.bytesToHex(Arrays.copyOfRange(value, 0, 32)));
+			  if (value.length <= 32)
+				  return String.valueOf(Auxiliary.bytesToHex(Arrays.copyOfRange(value, 0, value.length)));   	
+			  else
+				  return String.valueOf(Auxiliary.bytesToHex(Arrays.copyOfRange(value, 0, 32)));
 	    }
 		return null;
 
@@ -111,8 +114,14 @@ public class SqliteElement {
 			return "<tiff>";			
 		if(blob.startsWith("474946383761") || blob.startsWith("474946383961"))
 			return "<gif>";			
+		if(blob.startsWith("1f8b"))
+			return "<gzip>";
 		if(blob.contains("66747970686569") || blob.contains("667479706d"))
-			return "<heic>";			
+			return "<heic>";
+		if(blob.startsWith("aced0005"))
+			return "<java>";
+		if(blob.startsWith("4f626a")) 
+			return "<avro>";
 		return "";
 	}
 	

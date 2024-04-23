@@ -1,5 +1,8 @@
 package fqlite.base;
 
+import java.nio.file.FileSystems;
+import java.util.logging.Level;
+
 public class Global {
 
 	public static final String REGULAR_RECORD = " "; // U2713 - regular
@@ -7,12 +10,14 @@ public class Global {
 	public static final String FREELIST_ENTRY = "F"; // U267D - freelist
 	public static final String STATUS_CLOMUN = "S"; // U291D U2691
 	public static final String UNALLOCATED_SPACE = "U"; // U2318 - unallocated space
-	public static final String FQLITE_VERSION = "2.1";
-	public static final String FQLITE_RELEASEDATE = "21/09/2023";
+	public static final String FQLITE_VERSION = "2.6";
+	public static final String FQLITE_RELEASEDATE = "18/04/2024";
+	public static final String YEAR = "2024";
 	public static final int CARVING_ERROR = -1;
-	public static int LOGLEVEL = Base.ERROR;
+	public static Level LOGLEVEL = Level.INFO;
 	public static int numberofThreads = 1;
-
+	public static final String separator = FileSystems.getDefault().getSeparator();
+	public static String WORKINGDIRECTORY;
 	
 	/* internal constants of page types */
 	public static final int TTBLLEAFPAGE = 8;
