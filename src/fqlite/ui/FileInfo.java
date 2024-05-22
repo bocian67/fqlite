@@ -109,10 +109,11 @@ public class FileInfo {
     	// MessageDigest md;
 		try {
 			//md = MessageDigest.getInstance("SHA-256");
+		
 			sha256hash = new DigestUtils(org.apache.commons.codec.digest.MessageDigestAlgorithms.SHA_256).digestAsHex(new File(path));
 			md5hash = new DigestUtils(org.apache.commons.codec.digest.MessageDigestAlgorithms.MD5).digestAsHex(new File(path));
 			sha1 = new DigestUtils(org.apache.commons.codec.digest.MessageDigestAlgorithms.SHA_1).digestAsHex(new File(path));
-
+		
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
