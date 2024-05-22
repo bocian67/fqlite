@@ -1,6 +1,7 @@
 package fqlite.ui.hexviewer;
 
 import java.io.File;
+
 import demo.fxtexteditor.Styles;
 import fqlite.base.GUI;
 import fqlite.base.HexFXWindow;
@@ -86,7 +87,7 @@ public void start(Stage stage) throws Exception
 	}
 	
 	// init styles
-	CssLoader.setStyles(() -> new Styles());		
+	CssLoader.setStyles(() -> new Styles());
 }
 
 

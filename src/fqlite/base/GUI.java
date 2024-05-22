@@ -2218,14 +2218,12 @@ public class GUI extends Application {
 	 * Try to find out, if there is a companion WAL-Archive. This file can be found
 	 * in the same directory as the database file and also has the same name as the
 	 * database, but with 4 character added to the end – “-wal”
-	 * 
+	 *
 	 * 
 	 * @param dbfile
 	 * @return
 	 */
 	public static long doesWALFileExist(String dbfile) {
-		
-		
 		String walpath = dbfile + "-wal";
 		Path path = Paths.get(walpath);
 
