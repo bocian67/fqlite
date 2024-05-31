@@ -17,4 +17,6 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew --info --stacktrace build
+      - name: Create runtime with Gradle
+        run: ./gradlew --info --stacktrace runtime
