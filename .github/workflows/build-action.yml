@@ -2,8 +2,12 @@ name: Build Application
 on: [pull_request]
 jobs:
   build:
-    name: Gradle Build
-    runs-on: ubuntu-latest
+    name: Gradle Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macOS-latest, windows-latest ]
+      fail-fast: false
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
