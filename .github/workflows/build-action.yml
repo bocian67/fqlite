@@ -20,7 +20,18 @@ jobs:
         uses: gradle/gradle-build-action@v3
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Build with Gradle
-        run: ./gradlew --info --stacktrace build
-      - name: Create runtime with Gradle
-        run: ./gradlew --info --stacktrace runtime
+      - name: Create MacOS installer
+        if: startsWith(matrix.os, 'macOS')
+        run: ./gradlew --info --stacktrace jpackage -Pplatform='mac'
+      - name: Create Linux installer
+        if: startsWith(matrix.os, 'ubuntu')
+        run: ./gradlew --info --stacktrace jpackage -Pplatform='lin'
+      - name: Create Windows installer
+        if: startsWith(matrix.os, 'windows')
+        run: ./gradlew --info --stacktrace jpackage -Pplatform='win'
+      - name: Upload Mac Artifact
+        if: startsWith(matrix.os, 'macOS')
+        uses: actions/upload-artifact@v4
+        with:
+          name: fqlite-${{ matrix.os }}
+          path: build/jpackage/*.dmg

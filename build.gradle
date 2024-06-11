@@ -1,3 +1,5 @@
+// https://github.com/beryx/fxgl-sliding-puzzle/blob/master/.github/workflows/gradle.yml
+
 plugins {
     id 'java'
     id 'java-library'
@@ -66,26 +68,35 @@ jar {
 //     addExtraDependencies("javafx")
 // }
 
+def platformOverride = "mac";
+if (project.hasProperty("platform")) {
+    platformOverride = project.getProperty("platform")
+    println "Target platform set to $platformOverride"
+}
+
 runtime {
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
 
 // Uncomment and adjust the code below if you want to generate images for multiple platforms.
 // (You need to also uncomment the line 'targetPlatformName = ...' in the jpackage block.)
 
-    targetPlatform("lin") {
-        jdkHome = jdkDownload("https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_linux-x64_bin.tar.gz")
-    }
-
-    targetPlatform("mac") {
-        jdkHome = jdkDownload("https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_macos-x64_bin.tar.gz") {
-            archiveExtension = "tar.gz"
-            pathToHome = "jdk-20.0.2.jdk/Contents/Home"
-            overwrite = true
+    if (platformOverride == "lin") {
+        targetPlatform("lin") {
+            jdkHome = jdkDownload("https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_linux-x64_bin.tar.gz")
         }
     }
-
-    targetPlatform("win") {
-        jdkHome = jdkDownload("https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_windows-x64_bin.zip")
+    else if (platformOverride == "mac") {
+        targetPlatform("mac") {
+            jdkHome = jdkDownload("https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_macos-x64_bin.tar.gz") {
+                archiveExtension = "tar.gz"
+                pathToHome = "jdk-20.0.2.jdk/Contents/Home"
+                overwrite = true
+            }
+        }
+    } else if (platformOverride == "win") {
+        targetPlatform("win") {
+            jdkHome = jdkDownload("https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_windows-x64_bin.zip")
+        }
     }
 
     launcher {
@@ -94,7 +105,7 @@ runtime {
     }
     jpackage {
         // Uncomment and adjust the following line if your runtime task is configured to generate images for multiple platforms
-        // targetPlatformName = "mac"
+        targetPlatformName = platformOverride
 
         def currentOs = org.gradle.internal.os.OperatingSystem.current()
         installerOptions += ['--resource-dir', "resources"]
