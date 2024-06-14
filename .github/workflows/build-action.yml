@@ -6,7 +6,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, macOS-latest, windows-latest ]
+        os: [ ubuntu-latest, macos-13, windows-latest ]
       fail-fast: false
     steps:
       - name: Checkout sources
@@ -20,7 +20,24 @@ jobs:
         uses: gradle/gradle-build-action@v3
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Build with Gradle
-        run: ./gradlew --info --stacktrace build
-      - name: Create runtime with Gradle
-        run: ./gradlew --info --stacktrace runtime
+      - name: Create MacOS installer
+        if: startsWith(matrix.os, 'mac')
+        run: ./gradlew --info --stacktrace jpackage -Pplatform='mac'
+      - name: Create Linux installer
+        if: startsWith(matrix.os, 'ubuntu')
+        run: ./gradlew --info --stacktrace jpackage -Pplatform='lin'
+      - name: Create Windows installer
+        if: startsWith(matrix.os, 'windows')
+        run: $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage -Pplatform="win" --info --stacktrace
+      - name: Upload Mac Artifact
+        if: startsWith(matrix.os, 'mac')
+        uses: actions/upload-artifact@v4
+        with:
+          name: fqlite-${{ matrix.os }}
+          path: build/jpackage/*.dmg
+      - name: Upload Windows Artifact
+        if: startsWith(matrix.os, 'windows')
+        uses: actions/upload-artifact@v4
+        with:
+          name: fqlite-${{ matrix.os }}
+          path: build/jpackage/*.exe
