@@ -28,7 +28,7 @@ jobs:
         run: ./gradlew --info --stacktrace jpackage -Pplatform='lin'
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
-        run: ./gradlew --info --stacktrace jpackage -Pplatform='win'
+        run: $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage -Pplatform="win" --info --stacktrace
       - name: Upload Mac Artifact
         if: startsWith(matrix.os, 'macOS')
         uses: actions/upload-artifact@v4
