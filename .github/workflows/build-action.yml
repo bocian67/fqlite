@@ -35,3 +35,9 @@ jobs:
         with:
           name: fqlite-${{ matrix.os }}
           path: build/jpackage/*.dmg
+      - name: Upload Windows Artifact
+        if: startsWith(matrix.os, 'windows')
+        uses: actions/upload-artifact@v4
+        with:
+          name: fqlite-${{ matrix.os }}
+          path: build/jpackage/*.exe
