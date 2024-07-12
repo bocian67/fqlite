@@ -22,13 +22,13 @@ jobs:
         run: chmod +x ./gradlew
       - name: Create MacOS installer
         if: startsWith(matrix.os, 'mac')
-        run: ./gradlew --info --stacktrace jpackage -Pplatform='mac'
+        run: ./gradlew --info --stacktrace jpackage
       - name: Create Linux installer
         if: startsWith(matrix.os, 'ubuntu')
-        run: ./gradlew --info --stacktrace jpackage -Pplatform='lin'
+        run: ./gradlew --info --stacktrace jpackage
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
-        run: $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage -Pplatform="win" --info --stacktrace
+        run: $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
       - name: Upload Mac Artifact
         if: startsWith(matrix.os, 'mac')
         uses: actions/upload-artifact@v4
