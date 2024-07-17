@@ -28,7 +28,7 @@ jobs:
         if: startsWith(matrix.os, 'mac')
         run: |
           ./gradlew --info --stacktrace jpackage
-          export OUTPUT_FILE="build/jpackage/*.dmg"
+          echo "OUTPUT_FILE=$(find build/jpackage -name "*.dmg" -exec realpath {} \;)" >> $GITHUB_ENV
       - name: Create Linux installer
         if: startsWith(matrix.os, 'ubuntu')
         run: |
@@ -38,7 +38,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         run: |
           $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
-          export OUTPUT_FILE="build/jpackage/*.exe"
+          echo "OUTPUT_FILE=$(find build/jpackage -name "*.exe" -exec realpath {} \;)" >> $GITHUB_ENV
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
