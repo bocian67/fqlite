@@ -39,7 +39,8 @@ jobs:
         shell: cmd
         run: |
           $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
-          for /r "build\jpackage" %i in (*.exe) do @echo OUTPUT_FILE=%~fi >> "%GITHUB_ENV%"
+          Get-ChildItem build\jpackage\*.exe | Select-Object -First 1 | % { echo "OUTPUT_FILE=$($_.FullName)" >> $env:GITHUB_ENV }
+          for /r "" %i in (*.exe) do @echo OUTPUT_FILE=%~fi
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
