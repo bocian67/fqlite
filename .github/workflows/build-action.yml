@@ -8,6 +8,10 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-13, windows-latest ]
       fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -22,22 +26,33 @@ jobs:
         run: chmod +x ./gradlew
       - name: Create MacOS installer
         if: startsWith(matrix.os, 'mac')
-        run: ./gradlew --info --stacktrace jpackage
+        run: |
+          ./gradlew --info --stacktrace jpackage
+          export OUTPUT_FILE="build/jpackage/*.dmg"
       - name: Create Linux installer
         if: startsWith(matrix.os, 'ubuntu')
-        run: ./gradlew --info --stacktrace jpackage
+        run: |
+          ./gradlew --info --stacktrace jpackage
+          export OUTPUT_FILE="build/jpackage/*"
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
-        run: $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
+        run: |
+          $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
+          export OUTPUT_FILE="build/jpackage/*.exe"
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: $OUTPUT_FILE
+
       - name: Upload Mac Artifact
         if: startsWith(matrix.os, 'mac')
         uses: actions/upload-artifact@v4
         with:
           name: fqlite-${{ matrix.os }}
-          path: build/jpackage/*.dmg
+          path: $OUTPUT_FILE
       - name: Upload Windows Artifact
         if: startsWith(matrix.os, 'windows')
         uses: actions/upload-artifact@v4
         with:
           name: fqlite-${{ matrix.os }}
-          path: build/jpackage/*.exe
+          path: $OUTPUT_FILE
