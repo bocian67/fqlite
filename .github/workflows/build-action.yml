@@ -36,6 +36,7 @@ jobs:
           export OUTPUT_FILE="build/jpackage/*"
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
+        shell: cmd
         run: |
           $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
           for /r "build\jpackage" %i in (*.exe) do @echo OUTPUT_FILE=%~fi >> "%GITHUB_ENV%"
