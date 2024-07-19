@@ -25,16 +25,18 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Create MacOS installer
+        id: mac_installer
         if: startsWith(matrix.os, 'mac')
         run: |
           ./gradlew --info --stacktrace jpackage
-          echo "OUTPUT_FILE=$(find build/jpackage -name "*.dmg" -exec realpath {} \;)" >> $GITHUB_ENV
+          echo ::set-output name=OUTPUT_FILE::$(find build/jpackage -name "*.dmg" -exec realpath {} \;)
+          echo ::set-output name=ARCH_TYPE::$(uname -m)
       - name: Create Linux installer
+        id: ubuntu_installer
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           ./gradlew --info --stacktrace jpackage
-          echo $(ls build/jpackage/)
-          echo "OUTPUT_FILE=$(find build/jpackage -name "fqlite" -exec realpath {} \;)" >> $GITHUB_ENV
+          echo ::set-output name=OUTPUT_FILE::$(find build/jpackage -name "*.deb" -exec realpath {} \;)
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
         run: |
@@ -48,8 +50,8 @@ jobs:
         if: startsWith(matrix.os, 'mac')
         uses: actions/upload-artifact@v4
         with:
-          name: fqlite-${{ matrix.os }}-$(uname -m)
-          path: "${{ env.OUTPUT_FILE }}"
+          name: fqlite-${{ matrix.os }}-${{ steps.mac_installer.outputs.ARCH_TYPE }}
+          path: "${{ steps.mac_installer.outputs.OUTPUT_FILE }}"
       - name: Upload Windows Artifact
         if: startsWith(matrix.os, 'windows')
         uses: actions/upload-artifact@v4
@@ -61,4 +63,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fqlite-${{ matrix.os }}
-          path: "${{ env.OUTPUT_FILE }}"
+          path: "${{ steps.ubuntu_installer.outputs.OUTPUT_FILE }}"
