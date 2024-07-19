@@ -58,15 +58,6 @@ jar {
     }
 }
 
-
-// jlink {
-//     launcher {
-//         name = 'fqlite.base.JARStarter'
-//     }
-//
-//     addExtraDependencies("javafx")
-// }
-
 /*
 def platformOverride = "mac";
 if (project.hasProperty("platform")) {
@@ -105,9 +96,6 @@ runtime {
     }
 
     jpackage {
-        // Uncomment and adjust the following line if your runtime task is configured to generate images for multiple platforms
-        //targetPlatformName = platformOverride
-
         def currentOs = org.gradle.internal.os.OperatingSystem.current()
         installerOptions += ['--resource-dir', "resources"]
 
