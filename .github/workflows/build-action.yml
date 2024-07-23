@@ -1,16 +1,13 @@
 name: Build Application
 on: 
-  push:
+  pull_request:
+    types:
+      - closed
     branches:
       - 'release/**'
-  #pull_request:
-  #  types:
-  #    - closed
-  #  branches:
-  #    - 'release/**'
 jobs:
   create-release:
-    #if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     name: Create release
     runs-on: ubuntu-latest
     outputs:
@@ -34,7 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
   build:
-    #if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     name: Gradle Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: create-release
