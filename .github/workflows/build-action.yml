@@ -7,7 +7,7 @@ on:
       - 'master'
 jobs:
   create-release:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && contains('release/', github.head_ref)
     name: Create release
     runs-on: ubuntu-latest
     outputs:
@@ -31,7 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
   build:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && contains('release/', github.head_ref)
     name: Gradle Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: create-release
