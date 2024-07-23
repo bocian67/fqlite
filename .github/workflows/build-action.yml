@@ -1,16 +1,50 @@
 name: Build Application
-on: [pull_request]
+on: 
+  push:
+    branches:
+      - 'release/**'
+  #pull_request:
+  #  types:
+  #    - closed
+  #  branches:
+  #    - 'release/**'
 jobs:
+  create-release:
+    #if: github.event.pull_request.merged == true
+    name: Create release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: create version tag variable
+        id: create_version
+        run: echo "VERSION=$(echo ${{ github.head_ref || github.ref_name }} | sed 's/^release\///')" >> "$GITHUB_OUTPUT"
+      - name: create release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ steps.create_version.outputs.VERSION }}
+          tag_name: ${{ steps.create_version.outputs.VERSION }}
+          body_path: ./CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
   build:
+    #if: github.event.pull_request.merged == true
     name: Gradle Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    needs: create-release
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-13, macos-14, windows-latest ]
       fail-fast: false
     permissions:
       id-token: write
-      contents: read
+      contents: write
       attestations: write
     steps:
       - name: Checkout sources
@@ -44,21 +78,34 @@ jobs:
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: "${{ env.OUTPUT_FILE }}"
-      - name: Upload Mac Artifact
+
+      - name: upload macOS artifact
         if: startsWith(matrix.os, 'mac')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
-          name: fqlite-${{ matrix.os }}-${{ env.MAC_ARCH }}
-          path: "${{ env.OUTPUT_FILE }}"
-      - name: Upload Windows Artifact
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FILE }}
+          asset_name: fqlite-${{ matrix.os }}-${{ env.MAC_ARCH }}
+          asset_content_type: application/octet-stream
+      - name: upload Windows artifact
         if: startsWith(matrix.os, 'windows')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
-          name: fqlite-${{ matrix.os }}
-          path: "${{ env.OUTPUT_FILE }}"
-      - name: Upload Linux Artifact
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FILE }}
+          asset_name: fqlite-${{ matrix.os }}
+          asset_content_type: application/octet-stream
+      - name: upload Windows artifact
         if: startsWith(matrix.os, 'ubuntu')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
-          name: fqlite-${{ matrix.os }}
-          path: "${{ env.OUTPUT_FILE }}"
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.OUTPUT_FILE }}
+          asset_name: fqlite-${{ matrix.os }}
+          asset_content_type: application/octet-stream

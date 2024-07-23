@@ -9,7 +9,7 @@ plugins {
 }
 
 group 'org.example'
-version '1.0.0'
+version '2.6.5'
 
 application {
     mainClassName = "fqlite.base.JARStarter"
