@@ -84,7 +84,7 @@ jobs:
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: ${{ env.OUTPUT_FILE }}
-          asset_name: fqlite-${{ matrix.os }}-${{ env.MAC_ARCH }}
+          asset_name: fqlite-${{ matrix.os }}-${{ env.MAC_ARCH }}.dmg
           asset_content_type: application/octet-stream
       - name: upload Windows artifact
         if: startsWith(matrix.os, 'windows')
@@ -94,7 +94,7 @@ jobs:
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: ${{ env.OUTPUT_FILE }}
-          asset_name: fqlite-${{ matrix.os }}
+          asset_name: fqlite-${{ matrix.os }}.exe
           asset_content_type: application/octet-stream
       - name: upload Windows artifact
         if: startsWith(matrix.os, 'ubuntu')
@@ -104,5 +104,5 @@ jobs:
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: ${{ env.OUTPUT_FILE }}
-          asset_name: fqlite-${{ matrix.os }}
+          asset_name: fqlite-${{ matrix.os }}.deb
           asset_content_type: application/octet-stream
