@@ -13,8 +13,7 @@ jobs:
       - name: Get project version
         id: gradle-version
         run: |
-          $version = gradle properties -q | awk '/^version:/ {print $2}'
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version=$(gradle properties -q | awk '/^version:/ {print $2}')" >> "$GITHUB_OUTPUT"
   build:
     name: Gradle Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
