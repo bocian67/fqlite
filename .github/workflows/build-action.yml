@@ -46,19 +46,22 @@ jobs:
         if: startsWith(matrix.os, 'mac')
         run: |
           ./gradlew --info --stacktrace jpackage
-          find build/jpackage -name "*.dmg" -exec sh -c 'x="{}"; mv "$x" "fqlite-${{ needs.get-version.outputs.version }}-macOS-$(uname -m).dmg"' \;
+          echo "OUTPUT_FILE_NAME=fqlite-${{ needs.get-version.outputs.version }}-macOS-$(uname -m).dmg" >> $GITHUB_ENV
+          find build/jpackage -name "*.dmg" -exec sh -c 'x="{}"; mv "$x" "${{ env.OUTPUT_FILE }}"' \;
           echo "OUTPUT_FILE=$(realpath fqlite-*)" >> $GITHUB_ENV
       - name: Create Linux installer
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           ./gradlew --info --stacktrace jpackage
-          find build/jpackage -name "*.deb" -exec sh -c 'x="{}"; mv "$x" "fqlite-${{ needs.get-version.outputs.version }}-ubuntu.deb"' \;
+           echo "OUTPUT_FILE_NAME=fqlite-${{ needs.get-version.outputs.version }}-ubuntu.deb" >> $GITHUB_ENV
+          find build/jpackage -name "*.deb" -exec sh -c 'x="{}"; mv "$x" "${{ env.OUTPUT_FILE }}"' \;
           echo "OUTPUT_FILE=$(realpath fqlite-*)" >> $GITHUB_ENV
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
         run: |
           $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
-          $file = Get-ChildItem build\jpackage\*.exe | Select-Object -First 1 | % Rename-Item -Path "$($_.FullName)" -NewName "fqlite-${{ needs.get-version.outputs.version }}-windows.exe" --PassThru
+          echo "OUTPUT_FILE_NAME=fqlite-${{ needs.get-version.outputs.version }}-windows.exe" >> $env:GITHUB_ENV
+          $file = Get-ChildItem build\jpackage\*.exe | Select-Object -First 1 | % Rename-Item -Path "$($_.FullName)" -NewName "${{ env.OUTPUT_FILE }}" --PassThru
           echo "OUTPUT_FILE=$file" >> $env:GITHUB_ENV
           $hash = Get-FileHash $file
           echo "FILE_HASH=$($hash[0].hash)" >> $env:GITHUB_ENV
@@ -71,7 +74,7 @@ jobs:
           subject-path: "${{ env.OUTPUT_FILE }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.OUTPUT_FILE }}"
+          name: "${{ env.OUTPUT_FILE_NAME }}"
           path: "${{ env.OUTPUT_FILE }}"
           overwrite: true
           retention-days: 14
