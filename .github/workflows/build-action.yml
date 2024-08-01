@@ -1,8 +1,8 @@
 name: Build Application
-on: 
+on:
   pull_request:
-    types:
-      - closed
+    #types:
+    #  - closed
     branches:
       - 'master'
 jobs:
@@ -55,6 +55,9 @@ jobs:
         uses: gradle/gradle-build-action@v3
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+        ##########
+        # Create installer for each platform
+        ##########
       - name: Create MacOS installer
         if: startsWith(matrix.os, 'mac')
         run: |
@@ -71,11 +74,30 @@ jobs:
         run: |
           $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
           Get-ChildItem build\jpackage\*.exe | Select-Object -First 1 | % { echo "OUTPUT_FILE=$($_.FullName)" >> $env:GITHUB_ENV }
+          $hash = Get-FileHash build\jpackage\*.exe
+          echo "FILE_HASH=$($hash[0].hash)" >> $env:GITHUB_ENV
+        ##########
+        # Generate artefact attestation
+        ##########
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: "${{ env.OUTPUT_FILE }}"
+        ##########
+        # Package artefacts
+        ##########
+        #####
+        # Windows - Chocolatey package
+        #####
+      - name: Generate chocolatey package
+        if: startsWith(matrix.os, 'windows')
+        uses: crazy-max/ghaction-chocolatey@v3
+        with:
+          args: pack packaging/choco/fqlite/fqlite.nuspec --version ${{ steps.create_version.outputs.VERSION }}
 
+        ##########
+        # Upload artefact to release for each platform
+        ##########
       - name: upload macOS artifact
         if: startsWith(matrix.os, 'mac')
         uses: actions/upload-release-asset@v1
@@ -105,4 +127,17 @@ jobs:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: ${{ env.OUTPUT_FILE }}
           asset_name: fqlite-${{ matrix.os }}.deb
+          asset_content_type: application/octet-stream
+        ##########
+        # Upload Packages to release
+        ##########
+      - name: upload Chocolatey package
+        if: startsWith(matrix.os, 'windows')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./fqlite.${{ steps.create_version.outputs.VERSION }}.nupkg
+          asset_name: fqlite.${{ steps.create_version.outputs.VERSION }}.nupkg
           asset_content_type: application/octet-stream
