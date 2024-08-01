@@ -10,6 +10,8 @@ jobs:
       version: ${{ steps.gradle-version.outputs.version }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
       - name: Get project version
         id: gradle-version
         run: |
