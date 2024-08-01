@@ -54,14 +54,14 @@ jobs:
         if: startsWith(matrix.os, 'mac')
         run: |
           ./gradlew --info --stacktrace jpackage
-          find build/jpackage -name "*.dmg" -exec sh -c 'x="{}"; mv "$x" "${{ env.OUTPUT_FILE }}"' \;
-          echo "OUTPUT_FILE=$(realpath $output_file_name)" >> $GITHUB_ENV
+          find build/jpackage -name "*.dmg" -exec sh -c 'x="{}"; mv "$x" "${{ env.OUTPUT_FILE_NAME }}"' \;
+          echo "OUTPUT_FILE=$(realpath ${{ env.OUTPUT_FILE_NAME }})" >> $GITHUB_ENV
       - name: Create Linux installer
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           ./gradlew --info --stacktrace jpackage
-          find build/jpackage -name "*.deb" -exec sh -c 'x="{}"; mv "$x" "$output_file_name"' \;
-          echo "OUTPUT_FILE=$(realpath $output_file_name" >> $GITHUB_ENV
+          find build/jpackage -name "*.deb" -exec sh -c 'x="{}"; mv "$x" "${{ env.OUTPUT_FILE_NAME }}"' \;
+          echo "OUTPUT_FILE=$(realpath ${{ env.OUTPUT_FILE_NAME }})" >> $GITHUB_ENV
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
         run: |
