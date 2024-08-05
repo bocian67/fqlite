@@ -126,7 +126,9 @@ jobs:
         ##########
         # Upload artefact to release for each platform
         ##########
-      - name: get latest macOS artifact
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: get latest artifacts
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
