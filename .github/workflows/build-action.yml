@@ -95,6 +95,8 @@ jobs:
       - name: Generate chocolatey package
         if: startsWith(matrix.os, 'windows')
         uses: crazy-max/ghaction-chocolatey@v3
+        env:
+          VERSION: ${{ needs.get-version.outputs.version }}
         with:
           args: pack packaging/choco/fqlite/fqlite.nuspec --version ${{ needs.get-version.outputs.version }}
       - uses: actions/upload-artifact@v4
@@ -132,5 +134,6 @@ jobs:
         with:
           body_path: CHANGELOG.md
           tag_name: ${{ steps.create-version.outputs.version }}
+          make_latest: true
           files: |
             artifacts/*

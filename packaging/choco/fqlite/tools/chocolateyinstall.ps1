@@ -1,7 +1,7 @@
 ﻿
 $ErrorActionPreference = 'Stop'
 $toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$url64      = "https://github.com/bocian67/fqlite/releases/download/$($env:VERSION)/fqlite-windows-latest"
+$url64      = "https://github.com/bocian67/fqlite/releases/download/$env:VERSION/fqlite-windows-latest"
 
 $packageArgs = @{
   packageName   = $env:ChocolateyPackageName
