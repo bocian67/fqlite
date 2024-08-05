@@ -1,47 +1,31 @@
 name: Build Application
-on: 
+on:
   pull_request:
-    types:
-      - closed
     branches:
       - 'master'
 jobs:
-  create-release:
-    if: github.event.pull_request.merged == true && contains('release/', github.head_ref)
-    name: Create release
-    runs-on: ubuntu-latest
+  get-version:
+    name: Get project version
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.gradle-version.outputs.version }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-      - name: create version tag variable
-        id: create_version
-        run: echo "VERSION=$(echo ${{ github.head_ref || github.ref_name }} | sed 's/^release\///')" >> "$GITHUB_OUTPUT"
-      - name: create release
-        uses: actions/create-release@v1
-        id: create_release
-        with:
-          draft: false
-          prerelease: false
-          release_name: ${{ steps.create_version.outputs.VERSION }}
-          tag_name: ${{ steps.create_version.outputs.VERSION }}
-          body_path: ./CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
+      - name: Get project version
+        id: gradle-version
+        run: |
+          echo "version=$(gradle properties -q | awk '/^version:/ {print $2}')" >> "$GITHUB_OUTPUT"
   build:
-    if: github.event.pull_request.merged == true && contains('release/', github.head_ref)
     name: Gradle Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    needs: create-release
+    needs: get-version
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-13, macos-14, windows-latest ]
       fail-fast: false
     permissions:
       id-token: write
-      contents: write
       attestations: write
     steps:
       - name: Checkout sources
@@ -55,54 +39,101 @@ jobs:
         uses: gradle/gradle-build-action@v3
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+        ##########
+        # Create installer for each platform
+        ##########
+      - name: Create MacOS file name
+        if: startsWith(matrix.os, 'mac')
+        run: |
+          echo "OUTPUT_FILE_NAME=fqlite-${{ needs.get-version.outputs.version }}-macOS-$(uname -m).dmg" >> $GITHUB_ENV
+      - name: Create Ubuntu file name
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          echo "OUTPUT_FILE_NAME=fqlite-${{ needs.get-version.outputs.version }}-ubuntu.deb" >> $GITHUB_ENV
       - name: Create MacOS installer
         if: startsWith(matrix.os, 'mac')
         run: |
           ./gradlew --info --stacktrace jpackage
-          echo "OUTPUT_FILE=$(find build/jpackage -name "*.dmg" -exec realpath {} \;)" >> $GITHUB_ENV
-          echo "MAC_ARCH=$(uname -m)" >> $GITHUB_ENV
+          find build/jpackage -name "*.dmg" -exec sh -c 'x="{}"; mv "$x" "${{ env.OUTPUT_FILE_NAME }}"' \;
+          echo "OUTPUT_FILE=$(realpath ${{ env.OUTPUT_FILE_NAME }})" >> $GITHUB_ENV
       - name: Create Linux installer
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           ./gradlew --info --stacktrace jpackage
-          echo "OUTPUT_FILE=$(find build/jpackage -name "*.deb" -exec realpath {} \;)" >> $GITHUB_ENV
+          find build/jpackage -name "*.deb" -exec sh -c 'x="{}"; mv "$x" "${{ env.OUTPUT_FILE_NAME }}"' \;
+          echo "OUTPUT_FILE=$(realpath ${{ env.OUTPUT_FILE_NAME }})" >> $GITHUB_ENV
       - name: Create Windows installer
         if: startsWith(matrix.os, 'windows')
         run: |
           $env:Path += ";%cd%\wix314-binaries"; .\gradlew jpackage --info --stacktrace
-          Get-ChildItem build\jpackage\*.exe | Select-Object -First 1 | % { echo "OUTPUT_FILE=$($_.FullName)" >> $env:GITHUB_ENV }
+          $file_name = "fqlite-${{ needs.get-version.outputs.version }}-windows.exe"
+          echo "OUTPUT_FILE_NAME=$file_name" >> $env:GITHUB_ENV
+          $exe = Get-ChildItem build\jpackage\*.exe | Select-Object -First 1
+          $file = Rename-Item -Path "$exe" -NewName "$file_name" -PassThru
+          echo "OUTPUT_FILE=$file" >> $env:GITHUB_ENV
+          $hash = Get-FileHash $file
+          echo "FILE_HASH=$($hash[0].hash)" >> $env:GITHUB_ENV
+        ##########
+        # Generate artefact attestation
+        ##########
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: "${{ env.OUTPUT_FILE }}"
-
-      - name: upload macOS artifact
-        if: startsWith(matrix.os, 'mac')
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FILE }}
-          asset_name: fqlite-${{ matrix.os }}-${{ env.MAC_ARCH }}
-          asset_content_type: application/octet-stream
-      - name: upload Windows artifact
+          name: "${{ env.OUTPUT_FILE_NAME }}"
+          path: "${{ env.OUTPUT_FILE }}"
+          overwrite: true
+          retention-days: 14
+        ##########
+        # Package artefacts
+        ##########
+        #####
+        # Windows - Chocolatey package
+        #####
+      - name: Generate chocolatey package
         if: startsWith(matrix.os, 'windows')
-        uses: actions/upload-release-asset@v1
+        uses: crazy-max/ghaction-chocolatey@v3
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.get-version.outputs.version }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FILE }}
-          asset_name: fqlite-${{ matrix.os }}
-          asset_content_type: application/octet-stream
-      - name: upload Windows artifact
-        if: startsWith(matrix.os, 'ubuntu')
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          args: pack packaging/choco/fqlite/fqlite.nuspec --version ${{ needs.get-version.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        if: startsWith(matrix.os, 'windows')
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.OUTPUT_FILE }}
-          asset_name: fqlite-${{ matrix.os }}
-          asset_content_type: application/octet-stream
+          name: "fqlite-${{ needs.get-version.outputs.version }}.nupkg"
+          path: "fqlite*.nupkg"
+          overwrite: true
+          retention-days: 14
+  publish:
+    if: github.event.pull_request.merged == true && contains('release/', github.head_ref)
+    name: Publish release artefacts
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    outputs:
+      version: ${{ steps.create-version.outputs.version }}
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+        ##########
+        # Upload artefact to release for each platform
+        ##########
+      - name: create version tag variable
+        id: create-version
+        run: echo "version=$(echo ${{ github.head_ref || github.ref_name }} | sed 's/^release\///')" >> "$GITHUB_OUTPUT"
+      - name: get latest macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: artifacts/
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.md
+          tag_name: ${{ steps.create-version.outputs.version }}
+          make_latest: true
+          files: |
+            artifacts/*
