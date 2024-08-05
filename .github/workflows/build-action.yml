@@ -3,6 +3,10 @@ on:
   pull_request:
     branches:
       - 'master'
+    types:
+      - closed
+      - synchronize
+      - opened
 jobs:
   get-version:
     name: Get project version
