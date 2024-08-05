@@ -69,7 +69,7 @@ jobs:
           $file_name = "fqlite-${{ needs.get-version.outputs.version }}-windows.exe"
           echo "OUTPUT_FILE_NAME=$file_name" >> $env:GITHUB_ENV
           $exe = Get-ChildItem build\jpackage\*.exe | Select-Object -First 1
-          $file = Rename-Item -Path "$exe" -NewName "$file_name" --PassThru
+          $file = Rename-Item -Path "$exe" -NewName "$file_name" -PassThru
           echo "OUTPUT_FILE=$file" >> $env:GITHUB_ENV
           $hash = Get-FileHash $file
           echo "FILE_HASH=$($hash[0].hash)" >> $env:GITHUB_ENV
