@@ -53,7 +53,7 @@ jobs:
       - name: Create Ubuntu file name
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          echo "OUTPUT_FILE_NAME=fqlite-${{ needs.get-version.outputs.version }}-$(uname -m).deb" >> $GITHUB_ENV
+          echo "OUTPUT_FILE_NAME=fqlite-${{ needs.get-version.outputs.version }}-$(uname -m) .deb" >> $GITHUB_ENV
       - name: Create MacOS installer
         if: startsWith(matrix.os, 'mac')
         run: |
@@ -141,3 +141,21 @@ jobs:
           make_latest: true
           files: |
             artifacts/*
+      - name: Upload apt repository
+        uses: MauroDruwel/apt-repo-action@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_supported_arch: |
+            amd64
+          repo_supported_version: |
+            bionic
+            trusty
+            focal
+            jammy
+          file: artifacts/*.deb
+          file_target_version: bionic
+          public_key: ${{ secrets.PUBLIC_KEY }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+          key_passphrase: ${{ secrets.PASSPHRASE }}
+          target_repository: bocian67/fqlite-apt
+
