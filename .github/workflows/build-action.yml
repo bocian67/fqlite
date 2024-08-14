@@ -161,5 +161,10 @@ jobs:
           private_key: ${{ secrets.PRIVATE_KEY }}
           key_passphrase: ${{ secrets.PASSPHRASE }}
           target_repository: bocian67/fqlite-apt
-          debug: true
+          debug: true 
+        env:
+          INPUT_GITHUB_TOKEN: ${{ secrets.PAT }}
+          INPUT_PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
+          INPUT_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          INPUT_KEY_PASSPHRASE: ${{ secrets.PASSPHRASE }}
 
