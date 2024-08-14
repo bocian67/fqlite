@@ -141,6 +141,9 @@ jobs:
           make_latest: true
           files: |
             artifacts/*
+      - name: Get .deb file name
+        run: |
+          echo "DEB_FILE=$(ls artifacts/*.deb)" >> $GITHUB_ENV
       - name: Upload apt repository
         uses: MauroDruwel/apt-repo-action@v4
         with:
@@ -152,7 +155,7 @@ jobs:
             trusty
             focal
             jammy
-          file: artifacts/*.deb
+          file: ${{ env.DEB_FILE }}
           file_target_version: bionic
           public_key: ${{ secrets.PUBLIC_KEY }}
           private_key: ${{ secrets.PRIVATE_KEY }}
