@@ -147,7 +147,7 @@ jobs:
       - name: Upload apt repository
         uses: MauroDruwel/apt-repo-action@v4
         with:
-          github_token: ${{ secrets.PAT }}
+          github_token: TEST_GITHUB_TOKEN
           repo_supported_arch: |
             amd64
           repo_supported_version: |
@@ -157,14 +157,9 @@ jobs:
             jammy
           file: ${{ env.DEB_FILE }}
           file_target_version: bionic
-          public_key: ${{ secrets.PUBLIC_KEY }}
-          private_key: ${{ secrets.PRIVATE_KEY }}
-          key_passphrase: ${{ secrets.PASSPHRASE }}
+          public_key: TEST_PUBLIC
+          private_key: TEST_PRIVATE
+          key_passphrase: TEST_PASSPHRASE
           target_repository: bocian67/fqlite-apt
           debug: true 
-        env:
-          INPUT_GITHUB_TOKEN: ${{ secrets.PAT }}
-          INPUT_PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
-          INPUT_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          INPUT_KEY_PASSPHRASE: ${{ secrets.PASSPHRASE }}
 
