@@ -1,7 +1,7 @@
 ﻿
 $ErrorActionPreference = 'Stop'
 $toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$url64      = "https://github.com/bocian67/fqlite/releases/download/2.6.5/fqlite-windows-latest"
+$url64      = "https://github.com/bocian67/fqlite/releases/download/{{VERSION}}/fqlite-windows-latest"
 
 $packageArgs = @{
   packageName   = $env:ChocolateyPackageName
@@ -11,7 +11,7 @@ $packageArgs = @{
 
   softwareName  = 'fqlite*'
 
-  checksum64    = $env:FILE_HASH
+  checksum64    = "{{HASH}}"
   checksumType64= 'sha256'
 
   validExitCodes= @(0, 3010, 1641)
