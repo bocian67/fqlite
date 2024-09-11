@@ -12,6 +12,8 @@ version '2.6.5'
 
 def protocversion = "27.4"
 
+def currentOs = org.gradle.internal.os.OperatingSystem.current()
+
 application {
     mainClassName = "fqlite.base.JARStarter"
 }
@@ -102,7 +104,6 @@ dependencies {
 }
 
 task downloadProtoc(type: Download) {
-    def currentOs = org.gradle.internal.os.OperatingSystem.current()
     def protocOsName = ""
     if (currentOs.windows) {
         protocOsName = "win64"
@@ -128,14 +129,23 @@ tasks.named('jpackage') {
 }
 
 tasks.jpackage.doFirst {
+    def fqliteJpackageDirectory = "build/jpackage/"
+    if (currentOs.windows) {
+        fqliteJpackageDirectory += "fqlite"
+    } else if (currentOs.linux) {
+        fqliteJpackageDirectory += "fqlite"
+    } else if (currentOs.macOsX) {
+        fqliteJpackageDirectory += "fqlite.app/Contents/MacOS"
+    }
     copy {
         from layout.buildDirectory.dir('protoc')
-        into "build/jpackage/$project.name/protoc"
+        //into fqliteJpackageDirectory + "/protoc"
+        into "$fqliteJpackageDirectory/protoc"
     }
     copy {
         from layout.projectDirectory
         include 'proto.run', 'proto.sh', 'protoc.bat'
-        into "build/jpackage/$project.name"
+        into "$fqliteJpackageDirectory"
     }
 }
 
@@ -148,7 +158,6 @@ runtime {
     }
 
     jpackage {
-        def currentOs = org.gradle.internal.os.OperatingSystem.current()
         installerOptions += ['--resource-dir', "resources"]
 
         if (currentOs.windows) {

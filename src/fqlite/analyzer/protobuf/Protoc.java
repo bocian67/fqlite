@@ -1,5 +1,6 @@
 package fqlite.analyzer.protobuf;
 
+import java.io.File;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 
@@ -14,14 +15,14 @@ public class Protoc extends Converter{
 		String result = "";
 		String shellscript = "";
 		try {
-			String cwd = Path.of("").toAbsolutePath().toString();
+			String cwd = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParentFile().getParent();
 			System.out.println("Protoc Path::" + cwd);
 			String os = System.getProperty("os.name");
 			System.out.println("Using System Property: " + os);
 			String separator = FileSystems.getDefault().getSeparator();
 			
 			
-			shellscript = cwd + separator + "./proto.run";
+			shellscript = cwd + separator + "MacOS/proto.run";
 			if (Auxiliary.isWindowsSystem())
 			{
 				shellscript = cwd + separator + "protoc.bat";
