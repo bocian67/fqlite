@@ -22,13 +22,14 @@ public class Protoc extends Converter{
 			String separator = FileSystems.getDefault().getSeparator();
 			
 			
-			shellscript = cwd + separator + "MacOS/proto.run";
+			shellscript = cwd + separator + "proto.sh";
 			if (Auxiliary.isWindowsSystem())
 			{
 				shellscript = cwd + separator + "protoc.bat";
 				
 			}
 			else if (Auxiliary.isMacOS()){
+				shellscript = cwd + separator + "MacOS/proto.run";
 				// do nothing take shellscript with absolute path
 				//shellscript = shellscript; //"./proto.run";
 				if (null != Global.WORKINGDIRECTORY){

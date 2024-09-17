@@ -133,13 +133,12 @@ tasks.jpackage.doFirst {
     if (currentOs.windows) {
         fqliteJpackageDirectory += "fqlite"
     } else if (currentOs.linux) {
-        fqliteJpackageDirectory += "fqlite"
+        fqliteJpackageDirectory += "fqlite/lib"
     } else if (currentOs.macOsX) {
         fqliteJpackageDirectory += "fqlite.app/Contents/MacOS"
     }
     copy {
         from layout.buildDirectory.dir('protoc')
-        //into fqliteJpackageDirectory + "/protoc"
         into "$fqliteJpackageDirectory/protoc"
     }
     copy {
